@@ -39,38 +39,38 @@ def _get_successors(problem, state):
     return _iter()
 
 def BreadthFirstSearch(problem: Problem[S, A], initial_state: S) -> Solution:
-    current_node=(initial_state,[]) # (state, path)
+    current_state,current_path=(initial_state,[]) # (state, path)
 
     frontier=Queue()              # FIFO frontier to store nodes (state, path)
-    frontier.put(current_node)
+    frontier.put((current_state,current_path))
 
     explored=set()
 
     frontier_set=set()
     frontier_set.add(initial_state)  # frontier set to store states name only this decreases search time
 
-    if problem.is_goal(current_node[0]) :
-        return current_node[1]
+    if problem.is_goal(current_state) :
+        return current_path
 
     while (not frontier.empty()):
-        current_node=frontier.get()
+        current_state,current_path=frontier.get()
         
-        for action in problem.get_actions(current_node[0]):
-            child=(problem.get_successor(current_node[0],action),current_node[1] +[action])
-            if (not (child[0] in frontier_set)) and (not (child[0] in explored)):
-                if problem.is_goal(child[0]) :
-                    return child[1]
-                frontier.put(child)
-                frontier_set.add(child[0])
+        for action in problem.get_actions(current_state):
+            child_state,child_path=(problem.get_successor(current_state,action),current_path +[action])
+            if (not (child_state in frontier_set)) and (not (child_state in explored)):
+                if problem.is_goal(child_state) :
+                    return child_path
+                frontier.put((child_state,child_path))
+                frontier_set.add(child_state)
 
-        explored.add(current_node[0]) 
+        explored.add(current_state) 
     return None
 
 def DepthFirstSearch(problem: Problem[S, A], initial_state: S) -> Solution:
-    current_node=(initial_state,[]) # (state, path)
+    current_state,current_path=(initial_state,[]) # (state, path)
 
     frontier=[]              # LIFO frontier to store nodes (state, path)
-    frontier.append(current_node)
+    frontier.append((current_state,current_path))
 
     explored=set()
 
@@ -79,17 +79,17 @@ def DepthFirstSearch(problem: Problem[S, A], initial_state: S) -> Solution:
 
 
     while frontier:
-        current_node=frontier.pop()
-        explored.add(current_node[0]) 
+        current_state,current_path=frontier.pop()
+        explored.add(current_state) 
 
-        if problem.is_goal(current_node[0]) :
-            return current_node[1]
+        if problem.is_goal(current_state) :
+            return current_path
         
-        for action in problem.get_actions(current_node[0]):
-            child=problem.get_successor(current_node[0],action),current_node[1] +[action]
-            if (not (child[0] in frontier_set)) and (not (child[0] in explored)):
-                frontier.append(child)
-                frontier_set.add(child[0])
+        for action in problem.get_actions(current_state):
+            child_state,child_path=problem.get_successor(current_state,action),current_path +[action]
+            if (not (child_state in frontier_set)) and (not (child_state in explored)):
+                frontier.append((child_state,child_path))
+                frontier_set.add(child_state)
 
     return None
 
