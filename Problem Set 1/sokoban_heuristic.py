@@ -19,12 +19,20 @@ def is_deadlock(problem: SokobanProblem, state: SokobanState) -> bool:
     # we will do that by checking if the stone is surrounded by walls or stones
     
     
-    # create lists to reserve goals along the walls
-    left_wall_goals_reserved = [] # list of goals that are reserved for the crates along the left wall
-    right_wall_goals_reserved = [] # list of goals that are reserved for the crates along the right wall
-    bottom_wall_goals_reserved = [] # list of goals that are reserved for the crates along the lower wall
-    top_wall_goals_reserved = [] # list of goals that are reserved for the crates along the upper wall
 
+    # get goals near walls lists to avoid unnecessary loops
+    left_wall_goals = [goal for goal in problem.layout.goals if goal.x == 1]
+    right_wall_goals = [goal for goal in problem.layout.goals if goal.x == problem.layout.width - 2]
+    top_wall_goals = [goal for goal in problem.layout.goals if goal.y == 1]
+    bottom_wall_goals = [goal for goal in problem.layout.goals if goal.y == problem.layout.height - 2]
+
+    # create lists to keep track of reserved goals for each wall
+    left_wall_goals_reserved = [] 
+    right_wall_goals_reserved = []
+    bottom_wall_goals_reserved = []
+    top_wall_goals_reserved = [] 
+
+    # initialize flag
     goals_flag = False
     
     # check each box for deadlock
@@ -35,43 +43,60 @@ def is_deadlock(problem: SokobanProblem, state: SokobanState) -> bool:
         
         goals_flag = False # flag to check if there is a goal along the wall for this stone
         
+        
         # check for each wall
         # left wall
         if box.x == 1:
-            if box in problem.layout.goals:  # if the crate is in a goal position then this goal is reserved for it
+            #  check if the box is already on a goal
+            if box in left_wall_goals:
+                # add to reserved goals
                 left_wall_goals_reserved.append(box)
                 continue
-            for goal in problem.layout.goals: # loop over the goals and check if there is a goal along the wall that is not reserved for another stone
-                if goal. x == box.x and goal not in state.crates and goal not in left_wall_goals_reserved:
+            # check for goals along the left wall
+            for goal in left_wall_goals:
+                if goal not in state.crates and goal not in left_wall_goals_reserved:
                     goals_flag = True
                     left_wall_goals_reserved.append(goal)
-            if goals_flag == False: # if there is no goal along the wall that is not reserved for another stone then it is a dead-end
+                    
+            # if no goal found along the wall for this box, then deadlock
+            if goals_flag == False: 
                 return True
             
         goals_flag = False # reset the flag
         
         # right wall
         if box.x == problem.layout.width - 2:
-            if box in problem.layout.goals:
+            # check if the box is already on a goal
+            if box in right_wall_goals:
+                # add to reserved goals
                 right_wall_goals_reserved.append(box)
                 continue
-            for goal in problem.layout.goals:
-                if goal. x == box.x and goal not in state.crates and goal not in right_wall_goals_reserved:
+            # check for goals along the right wall
+            for goal in right_wall_goals:
+                if goal not in state.crates and goal not in right_wall_goals_reserved:
                     goals_flag = True
                     right_wall_goals_reserved.append(goal)
+                    
+            # if no goal found along the wall for this box, then deadlock
             if goals_flag == False:
                 return True
             
         goals_flag = False # reset the flag
+        
         # top wall
         if box.y == 1:
-            if box in problem.layout.goals:
+            # check if the box is already on a goal
+            if box in top_wall_goals:
+                # add to reserved goals
                 top_wall_goals_reserved.append(box)
                 continue
-            for goal in problem.layout.goals:
-                if goal. y == box.y and goal not in state.crates and goal not in top_wall_goals_reserved:
+            # check for goals along the top wall
+            for goal in top_wall_goals:
+                if goal not in state.crates and goal not in top_wall_goals_reserved:
                     goals_flag = True
                     top_wall_goals_reserved.append(goal)
+            
+            # if no goal found along the wall for this box, then deadlock
             if goals_flag == False:
                 return True
             
@@ -79,28 +104,33 @@ def is_deadlock(problem: SokobanProblem, state: SokobanState) -> bool:
         
         # bottom wall
         if box.y == problem.layout.height - 2: 
-            if box in problem.layout.goals:
+            # check if the box is already on a goal
+            if box in bottom_wall_goals:
+                # add to reserved goals
                 bottom_wall_goals_reserved.append(box)
                 continue
-            for goal in problem.layout.goals:
-                if goal. y == box.y and goal not in state.crates and goal not in bottom_wall_goals_reserved:
+            # check for goals along the bottom wall
+            for goal in bottom_wall_goals:
+                if goal not in state.crates and goal not in bottom_wall_goals_reserved:
                     goals_flag = True
                     bottom_wall_goals_reserved.append(goal)
+            
+            # if no goal found along the wall for this box, then deadlock
             if goals_flag == False:
                 return True
             
         
         # check if this crate not in a goal position, if it is then it is not a dead-end
-        if box in problem.layout.goals: continue
+        if box in problem.layout.goals: 
+            continue
         
-        # get the surrounding stones
+        # get adjacent points to the box
         l = Point(box.x - 1, box.y) # left
         r = Point(box.x + 1, box.y) # right
         d = Point(box.x, box.y - 1) # down
         u = Point(box.x, box.y + 1) # up
 
-        # check the second case -->
-        
+        # check the case -->
         # if it is in a corner (i.e., there are walls in two perpendicular directions)
 
         if(l not in problem.layout.walkable and 
@@ -108,14 +138,14 @@ def is_deadlock(problem: SokobanProblem, state: SokobanState) -> bool:
             l != state.player and 
                 u != state.player and 
             l not in problem.layout.goals and 
-            u not in problem.layout.goals): # the top-left corner
+            u not in problem.layout.goals): # if it is in a corner from top-left
             return True
         if(l not in problem.layout.walkable and 
         d not in problem.layout.walkable and
         l != state.player and
         d != state.player and
         l not in problem.layout.goals and
-        d not in problem.layout.goals): # the bottom-left corner
+        d not in problem.layout.goals): # if it is in a corner from bottom-left
             return True
         if(r not in problem.layout.walkable and
             
@@ -123,14 +153,14 @@ def is_deadlock(problem: SokobanProblem, state: SokobanState) -> bool:
         r != state.player and
         u != state.player and
         r not in problem.layout.goals and
-        u not in problem.layout.goals): # the top-right corner
+        u not in problem.layout.goals): # if it is in a corner from top-right
             return True
         if(r not in problem.layout.walkable and 
         d not in problem.layout.walkable and
         r != state.player and
         d != state.player and
         r not in problem.layout.goals and
-        d not in problem.layout.goals): # the bottom-right corner
+        d not in problem.layout.goals): # if it is in a corner from bottom-right
             return True
 
         
@@ -157,14 +187,9 @@ def is_deadlock(problem: SokobanProblem, state: SokobanState) -> bool:
             
         # when there is a wall near the box and there are obstacles in the diagonal and one of the adjacent sides
         
-        #########
-        #       #
-        # #     #
-        #       #
-        #    #  #
         ## #### #
         # $*.   #  --> this $ crate is in deadlock
-        # *  @$ #
+        # *  @  #
         #########
 
         if box.x == 2: # check if the box is near the left wall
@@ -187,15 +212,21 @@ def is_deadlock(problem: SokobanProblem, state: SokobanState) -> bool:
                 # check if the path from this crate to the end of the wall doesn't contain a goal for it
                 goals_n = 0
                 crates_n = 0
-                for i in range(box.x+1, problem.layout.width-1):
-                    # if a wall is found before finding a goal, then dead-end
-                    if Point(i, box.y) not in problem.layout.walkable:
-                        if goals_n == 0:
-                            return True
-                    if Point(i, box.y) in problem.layout.goals:
+                
+                # count goals and crates along the wall
+                for i in range(box.x+1, problem.layout.width -1):
+                    point = Point(i, box.y)
+                    # if there is a wall before finding a goal, then deadlock
+                    if point not in problem.layout.walkable and goals_n == 0:
+                        return True
+                    # if there is a goal or crate, count them
+                    if point in problem.layout.goals:
                         goals_n += 1
-                    if Point(i, box.y) in state.crates:
+                    if point in state.crates:
                         crates_n += 1
+                        
+                
+                # if there are not enough goals for the crates, then deadlock
                 if goals_n <= crates_n:
                     return True
                 
@@ -211,19 +242,29 @@ def is_deadlock(problem: SokobanProblem, state: SokobanState) -> bool:
             obstacle = False
             goal_found = False
             all_walls = True
+            
+            # check for obstacles to the left of the crate
             for i in range(box.x-1, 0, -1):
-                if Point(i, box.y) in problem.layout.walkable and \
-                Point(i, box.y) not in state.crates:
-                    break
-                elif Point(i, box.y) not in state.crates:
-                    obstacle = True
-                    obstacle_point = Point(i, box.y)
-                    for j in range(obstacle_point.y-1, 0, -1):
-                        if Point(obstacle_point.x, j) in problem.layout.walkable:
-                            all_walls = False
-                            break
+                point = Point(i, box.y)
+                
+                 # if walkable and not a crate, break
+                if point in problem.layout.walkable and \
+                    point not in state.crates:
                     break
                 
+                else:
+                    # if there is an obstacle
+                    if point not in state.crates:
+                        obstacle = True
+                        obstacle_point = point
+                        # check if there is a walkable point above the obstacle
+                        for j in range(obstacle_point.y-1, 0, -1):
+                            if Point(obstacle_point.x, j) in problem.layout.walkable:
+                                all_walls = False
+                                break
+                        break
+                    
+            # if there is an obstacle and all walls 
             if obstacle == True and all_walls == True:
                 # check for a goal possible for this crate
                 for i in range(box.y-1, 0, -1):
