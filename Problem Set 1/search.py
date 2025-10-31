@@ -39,25 +39,34 @@ def _get_successors(problem, state):
     return _iter()
 
 def BreadthFirstSearch(problem: Problem[S, A], initial_state: S) -> Solution:
-    current_state,current_path=(initial_state,[]) # (state, path)
+    # initialize the first node with its state and empty path
+    # the path will store the sequence of actions that lead from the start to the current state
+    current_state,current_path=(initial_state,[]) # each node is a tuple (state, path)
 
-    frontier=Queue()              # FIFO frontier to store nodes (state, path)
-    frontier.put((current_state,current_path))
+    # BFS uses a queue because it explores all nodes at the current depth before going deeper.
+    frontier=Queue()                              # FIFO frontier to store nodes (state, path)
+    frontier.put((current_state,current_path))    # initialize the frontier with the source node
 
-    explored=set()
+    explored=set()                                # set datatype to avoid duplicates
 
-    frontier_set=set()
-    frontier_set.add(initial_state)  # frontier set to store states name only this decreases search time
+    # frontier_set stores only the states currently inside the frontier.
+    # this helps us check existance in O(1) time instead of searching through the entire queue.
+    frontier_set=set()                          
+    frontier_set.add(initial_state) 
 
     if problem.is_goal(current_state) :
         return current_path
 
+    # main loop: continue until there are no nodes left to explore in the frontier.
     while (not frontier.empty()):
         current_state,current_path=frontier.get()
-        
+
+        # for each possible action from the current state, expand the node.
         for action in problem.get_actions(current_state):
             child_state,child_path=(problem.get_successor(current_state,action),current_path +[action])
             if (not (child_state in frontier_set)) and (not (child_state in explored)):
+                # if the child state is the goal, immediately return the path that leads to it.
+                # why? because BFS searches for the shallowest goal  
                 if problem.is_goal(child_state) :
                     return child_path
                 frontier.put((child_state,child_path))
@@ -66,25 +75,36 @@ def BreadthFirstSearch(problem: Problem[S, A], initial_state: S) -> Solution:
         explored.add(current_state) 
     return None
 
+
 def DepthFirstSearch(problem: Problem[S, A], initial_state: S) -> Solution:
+    # initialize the first node with its state and empty path
+    # the path will store the sequence of actions that lead from the start to the current state
     current_state,current_path=(initial_state,[]) # (state, path)
 
-    frontier=[]              # LIFO frontier to store nodes (state, path)
+
+    # we use a list as a stack (LIFO) for DFS — the last state added is the first one explored
+    frontier=[]              #frontier stores nodes (state, path)
     frontier.append((current_state,current_path))
 
+    # This set keeps track of states we’ve already visited to avoid exploring them again
     explored=set()
 
+    # frontier_set stores only the states currently inside the frontier.
+    # this helps us check existance in O(1) time instead of searching through the entire queue.
     frontier_set=set()
     frontier_set.add(initial_state)  # frontier set to store states name only this decreases search time
 
-
+    # loop as long as there are still nodes to explore
     while frontier:
         current_state,current_path=frontier.pop()
         explored.add(current_state) 
 
+        # if the current state is the goal, return its path     
+        # check if its a goal after pop it from the frontier as the DFS searches for the deepest goal    
         if problem.is_goal(current_state) :
             return current_path
         
+        # otherwise, look at all possible actions we can take from this state
         for action in problem.get_actions(current_state):
             child_state,child_path=problem.get_successor(current_state,action),current_path +[action]
             if (not (child_state in frontier_set)) and (not (child_state in explored)):
