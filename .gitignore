@@ -22,3 +22,5 @@ rad.json
 TestResults.xml
 #compiled python files
 .pyc
+#any file in the "problem set 1" folder
+/problem set 1/*
