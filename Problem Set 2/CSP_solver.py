@@ -107,7 +107,7 @@ def least_restraining_values(problem: Problem, variable_to_assign: str, domains:
     # assume each value and loop over the neighbors of x (the given variable)
     # and check each value in the domain of each neighbor y with the current assumed value of x
     # if not available ==> increase the pruned values counter
-    # and return the possible values of x paired with their pruned counter
+    # and return the possible values of x using the least restraining value heuristic
     # sorted ascending (the least is better)
     for value in x_domain:
         pruned_values_count = 0
