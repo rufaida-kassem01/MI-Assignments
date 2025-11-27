@@ -57,8 +57,40 @@ def forward_checking(problem: Problem, assigned_variable: str, assigned_value: A
 #            since they contain the current domains of unassigned variables only.
 def least_restraining_values(problem: Problem, variable_to_assign: str, domains: Dict[str, set]) -> List[Any]:
     #TODO: Write this function
-    NotImplemented()
-
+    # create a copy of the domains to not modify the given one
+    import copy
+    domains_copy = copy.deepcopy(domains)
+    x = variable_to_assign
+    x_domain = domains_copy[x]
+    # y are the neighbors of x
+    neighbors = [constraint.get_other(x) for constraint in problem.constraints if isinstance(constraint, BinaryConstraint) and x in constraint.variables]
+    
+    # create the results list
+    result = []
+    
+    # loop over the values possible for the variable given to the function
+    # assume each value and loop over the neighbors of x (the given variable)
+    # and check each value in the domain of each neighbor y with the current assumed value of x
+    # if not available ==> increase the pruned values counter
+    # and return the possible values of x paired with their pruned counter
+    # sorted ascending (the least is better)
+    for value in x_domain:
+        pruned_values_count = 0
+        for y in neighbors:
+            y_domain = domains_copy[y]
+            for y_value in y_domain:
+                # find the constraint between x and y
+                constraint = next(constraint for constraint in problem.constraints if isinstance(constraint, BinaryConstraint) and set(constraint.variables) == {x, y})
+                if not constraint.condition(value, y_value):
+                    pruned_values_count += 1
+                    # no need to actually prune since we are just counting
+                    # y_domain.remove(y_value)
+        result.append((value, pruned_values_count))
+    # sort the result based on the pruned values count first, then by the value itself
+    result.sort(key=lambda pair: (pair[1], pair[0]))
+    
+    # return the sorted list of x values only
+    return [pair[0] for pair in result]
 # This function should solve CSP problems using backtracking search with forward checking.
 # The variable ordering should be decided by the MRV heuristic.
 # The value ordering should be decided by the "least restraining value" heurisitc.
