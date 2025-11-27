@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional
 from CSP import Assignment, BinaryConstraint, Problem, UnaryConstraint
 from helpers.utils import NotImplemented
+from copy import deepcopy
 
 # This function applies 1-Consistency to the problem.
 # In other words, it modifies the domains to only include values that satisfy their variables' unary constraints.
@@ -43,7 +44,7 @@ def minimum_remaining_values(problem: Problem, domains: Dict[str, set]) -> str:
 #            since they contain the current domains of unassigned variables only.
 def forward_checking(problem: Problem, assigned_variable: str, assigned_value: Any, domains: Dict[str, set]) -> bool:
     #TODO: Write this function
-    NotImplemented()
+    # NotImplemented()
 
 # This function should return the domain of the given variable order based on the "least restraining value" heuristic.
 # IMPORTANT: This function should not modify any of the given arguments.
@@ -55,6 +56,40 @@ def forward_checking(problem: Problem, assigned_variable: str, assigned_value: A
 #            order them in ascending order (from the lowest to the highest value).
 # IMPORTANT: Don't use the domains inside the problem, use and modify the ones given by the "domains" argument 
 #            since they contain the current domains of unassigned variables only.
+    variables_to_check=[]
+    checking_constrains=[]
+    print("inside forward checking  function")
+    for constraint in problem.constraints:
+        #skip all unary constraints
+        if not isinstance(constraint, BinaryConstraint):
+            continue
+
+        #skip all constraints that do not involve the assigned variable
+        if assigned_variable not in constraint.variables:
+            continue
+
+        #get the other variable involved in the constraint
+        other_variable=constraint.get_other(assigned_variable)  
+        if other_variable not in domains.keys():
+            continue
+        
+        #deep copy the domain of the other variable to avoid modifying the original domains while iterating
+        tmp_domains=deepcopy(domains[other_variable])
+        for value in tmp_domains:
+            if not constraint.condition(assigned_value,value):
+                #remove values that violates the constrain from the other variable's domain
+                domains[other_variable].discard(value)
+
+        #check if the domain of the other variable is empty
+        if not domains[other_variable]:
+            return False
+
+    return True
+
+        
+
+
+
 def least_restraining_values(problem: Problem, variable_to_assign: str, domains: Dict[str, set]) -> List[Any]:
     #TODO: Write this function
     NotImplemented()
