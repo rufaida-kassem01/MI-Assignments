@@ -52,6 +52,74 @@ class CryptArithmeticProblem(Problem):
         problem.variables = []
         problem.domains = {}
         problem.constraints = []
+        
+        # create the set of unique letters
+        letters = set(LHS0 + LHS1 + RHS)
+        # define the domain for each letter
+        # all letters can take values from 0 to 9
+        # but leading letters cannot be 0
+        leading_letters = {LHS0[0], LHS1[0], RHS[0]}
+        for letter in letters:
+            problem.variables.append(letter)
+            if letter in leading_letters:
+                problem.domains[letter] = set(range(1, 10))  # leading letters cannot be 0
+            else:
+                problem.domains[letter] = set(range(0, 10))
+        
+        # construct the binary and unary constraints
+              
+        # add all-different constraint
+        # this ensures that all letters have different values
+        def all_different_constraint(assignment: Assignment) -> bool:
+            assigned_values = [value for value in assignment.values() if value is not None]
+            return len(assigned_values) == len(set(assigned_values))
+        # single coloumn constraint
+        def column_constraint(col: int, carry_in: int, carry_out: int, col_letters: Tuple[str, str, str]) -> BinaryConstraint:
+            """
+            Creates a constraint for a single column:
+                A  (from word1)
+            + B  (from word2)
+            + carry_in
+            = C  (result letter)
+            + 10 * carry_out
+            """
+            LHS0_letter, LHS1_letter, RHS_letter = col_letters
+            def constraint(assignment: Assignment) -> bool:
+                if (LHS0_letter not in assignment or LHS1_letter not in assignment or RHS_letter not in assignment):
+                    return True  # not all variables assigned yet -> no violation
+                LHS0_value = assignment[LHS0_letter]
+                LHS1_value = assignment[LHS1_letter]
+                RHS_value = assignment[RHS_letter]
+                if LHS0_value is None or LHS1_value is None or RHS_value is None:
+                    return True  # not all variables assigned yet -> no violation
+                total = LHS0_value + LHS1_value + carry_in
+                return (total % 10 == RHS_value) and (total // 10 == carry_out)
+            return constraint
+        
+        # create carry variables and column constraints
+        max_length = max(len(LHS0), len(LHS1), len(RHS))
+        carry_vars = [f"carry_{i}" for i in range(max_length + 1)]
+        # add carry variables to problem
+        # define their domains (0 or 1)
+        for carry_var in carry_vars:
+            problem.variables.append(carry_var)
+            problem.domains[carry_var] = {0, 1}  # carry can only be 0 or 1
+        # add column constraints
+        # for each column, create a constraint
+        for i in range(max_length):
+            LHS0_letter = LHS0[-(i+1)] if i < len(LHS0) else None
+            LHS1_letter = LHS1[-(i+1)] if i < len(LHS1) else None
+            RHS_letter = RHS[-(i+1)] if i < len(RHS) else None
+            col_letters = (LHS0_letter, LHS1_letter, RHS_letter)
+            carry_in = carry_vars[i]
+            carry_out = carry_vars[i+1]
+            constraint = column_constraint(i, carry_in, carry_out, col_letters)
+            problem.constraints.append(BinaryConstraint([LHS0_letter, LHS1_letter, RHS_letter, carry_in, carry_out], constraint))
+            
+        # add all-different constraint as a unary constraint
+        problem.constraints.append(UnaryConstraint(problem.variables, all_different_constraint))
+        
+        
         return problem
 
     # Read a cryptarithmetic puzzle from a file
