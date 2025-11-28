@@ -36,6 +36,10 @@ def minimax(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_depth:
         return values[0], None  # return the value for the player (max node)
     if max_depth == 0:
         return heuristic(game, state, 0), None  # return heuristic value for the player
+    
+    # determine next depth
+    # if max_depth is negative, it means no depth limit
+    # so we keep it negative
     if max_depth < 0:
         next_depth = -1  # no depth limit
     else:
@@ -43,6 +47,9 @@ def minimax(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_depth:
         
     agent = game.get_turn(state)
     actions = game.get_actions(state)
+    
+    # player's turn (max node) or enemy's turn (min node)
+    # our turn is always agent 0
     if agent == 0:  # max node
         max_value = float('-inf')
         best_action = None
