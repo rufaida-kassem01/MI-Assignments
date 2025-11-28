@@ -88,4 +88,45 @@ def alphabeta_with_move_ordering(game: Game[S, A], state: S, heuristic: Heuristi
 # they now act as chance nodes (they act randomly).
 def expectimax(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_depth: int = -1) -> Tuple[float, A]:
     #TODO: Complete this function
-    NotImplemented()
+    # terminal state
+    terminal, values = game.is_terminal(state)
+    if terminal:
+        return values[0], None  # return the value for the player (max node)
+    
+    # depth limit reached
+    if max_depth == 0:
+        return heuristic(game, state, 0), None  # return heuristic value for the player
+    # determine next depth
+    if max_depth < 0:
+        next_depth = -1  # no depth limit
+    else:
+        next_depth = max_depth - 1
+        
+    # get current agent and actions
+    agent = game.get_turn(state)
+    actions = game.get_actions(state)
+    
+    # player's turn (max node) or enemy's turn (chance node)
+    if agent == 0:  # max node
+        max_value = float('-inf')
+        best_action = None
+        for action in actions:
+            successor = game.get_successor(state, action)
+            value, _ = expectimax(game, successor, heuristic, next_depth)
+            if value > max_value:
+                max_value = value
+                best_action = action
+        return max_value, best_action
+    
+    else:  # chance node
+        total_value = 0
+        for action in actions:
+            successor = game.get_successor(state, action)
+            value, _ = expectimax(game, successor, heuristic, next_depth)
+            total_value += value
+            
+        # calculate expected value
+        # by assuming uniform distribution over actions
+        # we multiply by probability 1/len(actions)
+        expected_value = total_value / len(actions)
+        return expected_value, None
