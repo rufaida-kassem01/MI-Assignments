@@ -30,8 +30,40 @@ def greedy(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_depth: 
 # get values[0].
 def minimax(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_depth: int = -1) -> Tuple[float, A]:
     #TODO: Complete this function
-    NotImplemented()
-
+    # terminal state or depth limit reached
+    terminal, values = game.is_terminal(state)
+    if terminal:
+        return values[0], None  # return the value for the player (max node)
+    if max_depth == 0:
+        return heuristic(game, state, 0), None  # return heuristic value for the player
+    if max_depth < 0:
+        next_depth = -1  # no depth limit
+    else:
+        next_depth = max_depth - 1
+        
+    agent = game.get_turn(state)
+    actions = game.get_actions(state)
+    if agent == 0:  # max node
+        max_value = float('-inf')
+        best_action = None
+        for action in actions:
+            successor = game.get_successor(state, action)
+            value, _ = minimax(game, successor, heuristic, next_depth)
+            if value > max_value:
+                max_value = value
+                best_action = action
+        return max_value, best_action
+    else:  # min node
+        min_value = float('inf')
+        best_action = None
+        for action in actions:
+            successor = game.get_successor(state, action)
+            value, _ = minimax(game, successor, heuristic, next_depth)
+            if value < min_value:
+                min_value = value
+                best_action = action
+        return min_value, best_action
+    
 # Apply Alpha Beta pruning and return the tree value and the best action
 # Hint: Read the hint for minimax.
 def alphabeta(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_depth: int = -1) -> Tuple[float, A]:
