@@ -58,7 +58,7 @@ def forward_checking(problem: Problem, assigned_variable: str, assigned_value: A
 #            since they contain the current domains of unassigned variables only.
     variables_to_check=[]
     checking_constrains=[]
-    print("inside forward checking  function")
+    # print("inside forward checking  function")
     for constraint in problem.constraints:
         #skip all unary constraints
         if not isinstance(constraint, BinaryConstraint):
@@ -126,6 +126,8 @@ def least_restraining_values(problem: Problem, variable_to_assign: str, domains:
     
     # return the sorted list of x values only
     return [pair[0] for pair in result]
+
+
 # This function should solve CSP problems using backtracking search with forward checking.
 # The variable ordering should be decided by the MRV heuristic.
 # The value ordering should be decided by the "least restraining value" heurisitc.
@@ -137,4 +139,42 @@ def least_restraining_values(problem: Problem, variable_to_assign: str, domains:
 #            Also, if 1-Consistency deems the whole problem unsolvable, you shouldn't call "problem.is_complete" at all.
 def solve(problem: Problem) -> Optional[Assignment]:
     #TODO: Write this function
-    NotImplemented()
+    assignment={}
+
+    #apply 1-consistency to the problem
+    if not one_consistency(problem):
+        return None
+    
+    return recursive_backtracking(problem,assignment,problem.domains)
+
+def recursive_backtracking(problem, assignment, domains):
+    #base case : check if the assignment is complete
+    if problem.is_complete(assignment):
+        return assignment
+    
+
+    var = minimum_remaining_values(problem,domains)
+    ordered_values=least_restraining_values(problem,var,domains)
+
+    #try each value in the ordered values
+    for value in ordered_values:
+        assignment[var]=value
+
+        #create a deep copy of the domains to not modify the original one
+        new_domains=deepcopy(domains)
+
+        #remove the assigned variable from the domains because it is now assigned
+        del new_domains[var]
+
+        #apply forward checking to make sure the assignment is valid
+        if forward_checking(problem,var,value,new_domains):
+            result=recursive_backtracking(problem,assignment,new_domains)
+            if result is not None:
+                return result
+        #backtrack by removing the assigned variable from the assignment
+        del assignment[var]
+    return None
+
+
+
+    
