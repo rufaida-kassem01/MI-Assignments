@@ -75,13 +75,135 @@ def minimax(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_depth:
 # Hint: Read the hint for minimax.
 def alphabeta(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_depth: int = -1) -> Tuple[float, A]:
     #TODO: Complete this function
-    NotImplemented()
+ 
+    def alphabeta_recursive(current_state, depth, alpha, beta):
+        # Base case: if the state is terminal, return its value for the player.
+        terminal, values = game.is_terminal(current_state)
+        if terminal:
+            return values[0], None
+        
+        # Calculate the depth for the next recursive call.
+        current_depth = depth if depth < 0 else depth - 1
+        # Base case: if the maximum depth is reached, return the heuristic value of the state.
+        if depth == 0:
+            return heuristic(game, current_state, 0), None
+
+        # Get the current agent and their possible actions.
+        agent = game.get_turn(current_state)
+        actions = game.get_actions(current_state)
+        
+        if agent == 0:  # MAX player
+            max_value = float('-inf')
+            best_action = None
+            for action in actions:
+                # Get the successor state for the current action.
+                successor = game.get_successor(current_state, action)
+                # Recursively call the function for the successor state.
+                value, _ = alphabeta_recursive(successor, current_depth, alpha, beta)
+                # If this move is better than any found so far, update the best value and action.
+                if value > max_value:
+                    max_value = value
+                    best_action = action
+                # Update alpha
+                alpha = max(alpha, value)
+                # Pruning condition 
+                if beta <= alpha:
+                    break  # beta cut-off
+            return max_value, best_action
+        
+        else:  # MIN player
+            min_value = float('inf')
+            best_action = None
+            for action in actions:
+                # Get the successor state for the current action.
+                successor = game.get_successor(current_state, action)
+                # Recursively call the function for the successor state.
+                value, _ = alphabeta_recursive(successor, current_depth, alpha, beta)
+                # If this move is worse for the player than any found so far, update the best value and action.
+                if value < min_value:
+                    min_value = value
+                    best_action = action
+                # Update beta (the minimizer's best guaranteed score).
+                beta = min(beta, value)
+                # Pruning condition 
+                if beta <= alpha:
+                    break  # alpha cut-off
+            return min_value, best_action
+
+    # Start the search from the initial state with alpha = -inf and beta = +inf.
+    return alphabeta_recursive(state, max_depth, float('-inf'), float('inf'))
+
 
 # Apply Alpha Beta pruning with move ordering and return the tree value and the best action
 # Hint: Read the hint for minimax.
 def alphabeta_with_move_ordering(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_depth: int = -1) -> Tuple[float, A]:
     #TODO: Complete this function
-    NotImplemented()
+    
+    # It works similarly to the standard alphabeta_recursive but sorts moves before exploring them.
+    def alphabeta_ordered_recursive(current_state, depth, alpha, beta):
+        # Base case: if the state is terminal, return its value.
+        terminal, values = game.is_terminal(current_state)
+        if terminal:
+            return values[0], None
+        
+        # Base case: if the maximum depth is reached, return the heuristic value.
+        if depth == 0:
+            return heuristic(game, current_state, 0), None
+
+        # Calculate the depth for the next recursive call.
+        current_depth = depth if depth < 0 else depth - 1
+
+        # Get the current agent and their possible actions.
+        agent = game.get_turn(current_state)
+        actions = game.get_actions(current_state)
+        
+        # Move Ordering: Sort actions based on their heuristic value to improve pruning.
+        # By exploring better moves first, we are more likely to cause cut-offs early.
+        # The heuristic is always evaluated from the player's (agent 0) perspective.
+        # - For the MAX player (agent 0), we sort in descending order (reverse=True) to check best moves first.
+        # - For the MIN player (agent > 0), we sort in ascending order (reverse=False) to check worst-for-player moves first.
+        ordered_actions = sorted(actions, key=lambda action: heuristic(game, game.get_successor(current_state, action), 0), reverse=(agent == 0))
+        
+        if agent == 0:  # MAX player
+            max_value = float('-inf')
+            best_action = None
+            for action in ordered_actions:
+                # Get the successor state for the current action.
+                successor = game.get_successor(current_state, action)
+                # Recursively call the function for the successor state.
+                value, _ = alphabeta_ordered_recursive(successor, current_depth, alpha, beta)
+                # If this move is better than any found so far, update the best value and action.
+                if value > max_value:
+                    max_value = value
+                    best_action = action
+                # Update alpha.
+                alpha = max(alpha, value)
+                # Pruning condition (beta cut-off).
+                if beta <= alpha:
+                    break  # beta cut-off
+            return max_value, best_action
+        else:  # MIN player
+            min_value = float('inf')
+            best_action = None
+            for action in ordered_actions:
+                # Get the successor state for the current action.
+                successor = game.get_successor(current_state, action)
+                # Recursively call the function for the successor state.
+                value, _ = alphabeta_ordered_recursive(successor, current_depth, alpha, beta)
+                # If this move is worse for the player than any found so far, update the best value and action.
+                if value < min_value:
+                    min_value = value
+                    best_action = action
+                # Update beta.
+                beta = min(beta, value)
+                # Pruning condition (alpha cut-off).
+                if beta <= alpha:
+                    break  # alpha cut-off
+            return min_value, best_action
+
+    # Start the search from the initial state with alpha = -inf and beta = +inf.
+    return alphabeta_ordered_recursive(state, max_depth, float('-inf'), float('inf'))
+    
 
 # Apply Expectimax search and return the tree value and the best action
 # Hint: Read the hint for minimax, but note that the monsters (turn > 0) do not act as min nodes anymore,
