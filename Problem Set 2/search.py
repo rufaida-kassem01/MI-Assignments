@@ -226,7 +226,18 @@ def expectimax(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_dep
         
     # get current agent and actions
     agent = game.get_turn(state)
+    
+    # tree 2 has a tie problem (test case number 2 in the grader)
+    #     root
+    #  ├── A → expectimax value = 6
+    #  └── B → expectimax value = 6
+    # the grader expects action A to be chosen
+    # but it chooses B although we use strict greater than comparison
     actions = game.get_actions(state)
+    
+    # # if there are no actions, return heuristic value
+    # if not actions:
+    #     return heuristic(game, state, 0), None
     
     # player's turn (max node) or enemy's turn (chance node)
     if agent == 0:  # max node
@@ -241,14 +252,26 @@ def expectimax(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_dep
         return max_value, best_action
     
     else:  # chance node
-        total_value = 0
-        for action in actions:
-            successor = game.get_successor(state, action)
-            value, _ = expectimax(game, successor, heuristic, next_depth)
-            total_value += value
-            
         # calculate expected value
-        # by assuming uniform distribution over actions
-        # we multiply by probability 1/len(actions)
-        expected_value = total_value / len(actions)
+        # create list of successors
+        successors = [game.get_successor(state, action) for action in actions]
+        # create list of values
+        values = []
+        
+        expected_value = 0.0
+        # probability = 1.0 / len(successors)
+        for successor in successors:
+            value, _ = expectimax(game, successor, heuristic, next_depth)
+            values.append(value)
+        # sum values
+        total_value = sum(values)
+        # calculate probability
+        probability = 1.0 / len(values)
+        
+        expected_value = total_value * probability
+        # for action in actions:
+        #     successor = game.get_successor(state, action)
+        #     value, _ = expectimax(game, successor, heuristic, next_depth)
+        #     expected_value += value * probability
         return expected_value, None
+            
