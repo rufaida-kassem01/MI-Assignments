@@ -48,78 +48,163 @@ class CryptArithmeticProblem(Problem):
         # problem.domains:      should be dictionary that maps each variable (str) to its domain (set of values)
         #                       For the letters, the domain can only contain integers in the range [0,9].
         # problem.constaints:   should contain a list of constraint (either unary or binary constraints).
+        #                       For example, if the constraint is "A != 0", then the constraint should be UnaryConstraint("A", lambda x: x != 0)
+        #                       we can use lambda functions to define the constraint functions
 
         problem.variables = []
         problem.domains = {}
         problem.constraints = []
-        
-        # create the set of unique letters
-        letters = set(LHS0 + LHS1 + RHS)
-        # define the domain for each letter
-        # all letters can take values from 0 to 9
-        # but leading letters cannot be 0
-        leading_letters = {LHS0[0], LHS1[0], RHS[0]}
-        for letter in letters:
-            problem.variables.append(letter)
-            if letter in leading_letters:
-                problem.domains[letter] = set(range(1, 10))  # leading letters cannot be 0
-            else:
-                problem.domains[letter] = set(range(0, 10))
-        
-        # construct the binary and unary constraints
-              
-        # add all-different constraint
-        # this ensures that all letters have different values
-        def all_different_constraint(assignment: Assignment) -> bool:
-            assigned_values = [value for value in assignment.values() if value is not None]
-            return len(assigned_values) == len(set(assigned_values))
-        # single coloumn constraint
-        def column_constraint(col: int, carry_in: int, carry_out: int, col_letters: Tuple[str, str, str]) -> BinaryConstraint:
-            """
-            Creates a constraint for a single column:
-                A  (from word1)
-            + B  (from word2)
-            + carry_in
-            = C  (result letter)
-            + 10 * carry_out
-            """
-            LHS0_letter, LHS1_letter, RHS_letter = col_letters
-            def constraint(assignment: Assignment) -> bool:
-                if (LHS0_letter not in assignment or LHS1_letter not in assignment or RHS_letter not in assignment):
-                    return True  # not all variables assigned yet -> no violation
-                LHS0_value = assignment[LHS0_letter]
-                LHS1_value = assignment[LHS1_letter]
-                RHS_value = assignment[RHS_letter]
-                if LHS0_value is None or LHS1_value is None or RHS_value is None:
-                    return True  # not all variables assigned yet -> no violation
-                total = LHS0_value + LHS1_value + carry_in
-                return (total % 10 == RHS_value) and (total // 10 == carry_out)
-            return constraint
-        
-        # create carry variables and column constraints
-        max_length = max(len(LHS0), len(LHS1), len(RHS))
-        carry_vars = [f"carry_{i}" for i in range(max_length + 1)]
-        # add carry variables to problem
-        # define their domains (0 or 1)
-        for carry_var in carry_vars:
-            problem.variables.append(carry_var)
-            problem.domains[carry_var] = {0, 1}  # carry can only be 0 or 1
-        # add column constraints
-        # for each column, create a constraint
-        for i in range(max_length):
-            LHS0_letter = LHS0[-(i+1)] if i < len(LHS0) else None
-            LHS1_letter = LHS1[-(i+1)] if i < len(LHS1) else None
-            RHS_letter = RHS[-(i+1)] if i < len(RHS) else None
-            col_letters = (LHS0_letter, LHS1_letter, RHS_letter)
-            carry_in = carry_vars[i]
-            carry_out = carry_vars[i+1]
-            constraint = column_constraint(i, carry_in, carry_out, col_letters)
-            problem.constraints.append(BinaryConstraint([LHS0_letter, LHS1_letter, RHS_letter, carry_in, carry_out], constraint))
+
+
+
+        # add variables and domains
+        for letter in LHS0 + LHS1 + RHS:
+            # first make sure that the letter is not already in the problem.variables
+            if letter in problem.variables:
+                continue
+            problem.variables.append(letter) # add all letters to the problem
+            problem.domains[letter] = set(range(10)) # add all letters to the problem (domain is 0-9)
+
+        # the constrains are as follows:
+        # 1. all letters in LHS0, LHS1 and RHS should be different
+        # 2. the first letter of LHS0 and LHS1 should not be 0
+        # 3. the sum of LHS0 and LHS1 should be equal to RHS
+
+        # 1.
+        # add unary constraints to first letter of LHS0 and LHS1 --> not equal to 0
+        problem.constraints.append(UnaryConstraint(LHS0[0], lambda x: x != 0))
+        problem.constraints.append(UnaryConstraint(LHS1[0], lambda x: x != 0))
+        problem.constraints.append(UnaryConstraint(RHS[0], lambda x: x != 0))
+
+
+        # 2.
+        # to add the constraints that all letters in LHS0, LHS1 and RHS should be different
+        # we can loop through all letters in LHS0, LHS1 and RHS, and add binary constraints for each pair of letters
+        for var in problem.variables:
+            for var2 in problem.variables:
+                if var != var2:
+                    problem.constraints.append(BinaryConstraint((var, var2), lambda a, b: a != b))
+
+
+        # add carry variables and domains
+        for i in range(len(RHS)):
+            # carry_variables.append("CARRY" + str(i)) # add carry variables to the problem
+            # carry_domains["CARRY" + str(i)] = set(range(2)) # add carry variables to the problem (domain is 0-1)
+            problem.variables.append("CARRY" + str(i)) # add carry variables to the problem
+            problem.domains["CARRY" + str(i)] = set(range(2)) # add carry variables to the problem (domain is 0-1)
             
-        # add all-different constraint as a unary constraint
-        problem.constraints.append(UnaryConstraint(problem.variables, all_different_constraint))
+
+        # the fisrt carry variable should be 0
+        problem.constraints.append(UnaryConstraint("CARRY0", lambda x: x == 0))
+
+        # reverse the LHS0, LHS1 and RHS
+        LHS0 = LHS0[::-1]
+        LHS1 = LHS1[::-1]
+        RHS = RHS[::-1]
+
+        # print("LHS0: ", LHS0)
+        # print("LHS1: ", LHS1)
+        # print("RHS: ", RHS)
+    
+
+        dom1 = set()
+        for i in range(10):
+            for j in range(10):
+                for k in range(2):
+                    for l in range(10):
+                        dom1.add((i, j, k, l))
+
+        dom2 = set()
+        for i in range(10):
+            for j in range(10):
+                for k in range(2):
+                    for l in range(2):
+                        dom2.add((i, j, k, l))
+
+        dom3 = set()
+        for i in range(10):
+            for j in range(2):
+                for k in range(10):
+                    dom3.add((i, j, k))
+
+        dom4 = set()
+        for i in range(10):
+            for j in range(2):
+                for k in range(2):
+                    dom4.add((i, j, k))
+
         
+        # now let's add the constraints
+        # (LHS0[i] + LHS1[i] + CARRYi) % 10 = RHS[i]
+        # (LHS0[i] + LHS1[i] + CARRYi) // 10 = CARRY(i+1)
+        for i in range(max(len(LHS0), len(LHS1))):
+            if i >= len(LHS1): # len of LHS0 > len of LHS1
+                # LHS0[i] + CARRYi = RHS[i]
+                # if no corresponding letter in LHS1, then add a constraint with "CARRY"
+                # first push the tuple as a variable
+                problem.variables.append((LHS0[i], "CARRY" + str(i), RHS[i]))
+                # the domain of this tuple will be all combinations of 0-9 and 0-1 and 0-9
+                problem.domains[(LHS0[i], "CARRY" + str(i), RHS[i])] = dom3
+                problem.constraints.append(UnaryConstraint((LHS0[i], "CARRY" + str(i), RHS[i]), lambda a: (a[0] + a[1]) % 10 == a[2]))
+                # now link the mega variabels with each single variable
+                problem.constraints.append(BinaryConstraint((LHS0[i], (LHS0[i], "CARRY" + str(i), RHS[i])), lambda a, b: a == b[0]))
+                problem.constraints.append(BinaryConstraint(("CARRY" + str(i), (LHS0[i], "CARRY" + str(i), RHS[i])), lambda a, b: a == b[1]))
+                problem.constraints.append(BinaryConstraint((RHS[i], (LHS0[i], "CARRY" + str(i), RHS[i])), lambda a, b: a == b[2])) # this will print the lambda_var such that a is the value of RHS[i] and b is the tuple (LHS0[i], "CARRY" + str(i), RHS[i]) so a is of size 1 and b is of size 3
+
+                if i < len(RHS) - 1:
+                    problem.variables.append((LHS0[i], "CARRY" + str(i), "CARRY" + str(i+1)))
+                    problem.domains[(LHS0[i], "CARRY" + str(i), "CARRY" + str(i+1))] = dom4
+                    problem.constraints.append(UnaryConstraint((LHS0[i], "CARRY" + str(i), "CARRY" + str(i+1)), lambda a: (a[0] + a[1]) // 10 == a[2]))
+                    # now link the mega variabels with each single variable
+                    problem.constraints.append(BinaryConstraint(("CARRY" + str(i+1), (LHS0[i], "CARRY" + str(i), "CARRY" + str(i+1))), lambda a, b: a == b[2]))
+                    problem.constraints.append(BinaryConstraint((LHS0[i], (LHS0[i], "CARRY" + str(i), "CARRY" + str(i+1))), lambda a, b: a == b[0]))
+                    problem.constraints.append(BinaryConstraint(("CARRY" + str(i), (LHS0[i], "CARRY" + str(i), "CARRY" + str(i+1))), lambda a, b: a == b[1]))
+            elif i >= len(LHS0):
+                problem.variables.append((LHS1[i], "CARRY" + str(i), RHS[i]))
+                # the domain of this tuple will be all combinations of 0-9 and 0-1 and 0-9
+                problem.domains[(LHS1[i], "CARRY" + str(i), RHS[i])] = dom3
+                problem.constraints.append(UnaryConstraint((LHS1[i], "CARRY" + str(i), RHS[i]), lambda a: (a[0] + a[1]) % 10 == a[2]))
+                # now link the mega variabels with each single variable
+                problem.constraints.append(BinaryConstraint((RHS[i], (LHS1[i], "CARRY" + str(i), RHS[i])), lambda a, b: a == b[2]))
+                problem.constraints.append(BinaryConstraint((LHS1[i], (LHS1[i], "CARRY" + str(i), RHS[i])), lambda a, b: a == b[0]))
+                problem.constraints.append(BinaryConstraint(("CARRY" + str(i), (LHS1[i], "CARRY" + str(i), RHS[i])), lambda a, b: a == b[1]))
+                if i < len(RHS) - 1:
+                    problem.variables.append((LHS1[i], "CARRY" + str(i), "CARRY" + str(i+1)))
+                    problem.domains[(LHS1[i], "CARRY" + str(i), "CARRY" + str(i+1))] = dom4
+                    problem.constraints.append(UnaryConstraint((LHS1[i], "CARRY" + str(i), "CARRY" + str(i+1)), lambda a: (a[0] + a[1]) // 10 == a[2]))
+                    # now link the mega variabels with each single variable
+                    problem.constraints.append(BinaryConstraint(("CARRY" + str(i+1), (LHS1[i], "CARRY" + str(i), "CARRY" + str(i+1))), lambda a, b: a == b[2]))
+                    problem.constraints.append(BinaryConstraint((LHS1[i], (LHS1[i], "CARRY" + str(i), "CARRY" + str(i+1))), lambda a, b: a == b[0]))
+                    problem.constraints.append(BinaryConstraint(("CARRY" + str(i), (LHS1[i], "CARRY" + str(i), "CARRY" + str(i+1))), lambda a, b: a == b[1]))
+            else:
+                # (LHS0[i] + LHS1[i] + CARRYi) % 10 = RHS[i]  --> this will be a unary constraint and then we will link the mega variable (LHS0[i], LHS1[i], "CARRY" + str(i)) with each single variable
+                # first append the tuple as a variable
+                problem.variables.append((LHS0[i], LHS1[i], "CARRY" + str(i), RHS[i]))
+                # the domain of this tuple will be all combinations of 0-9 and 0-9 and 0-1 and 0-9
+                problem.domains[(LHS0[i], LHS1[i], "CARRY" + str(i), RHS[i])] = dom1
+                problem.constraints.append(UnaryConstraint((LHS0[i], LHS1[i], "CARRY" + str(i), RHS[i]), lambda a: (a[0] + a[1] + a[2]) % 10 == a[3]))
+                # now link the mega variabels with each single variable
+                problem.constraints.append(BinaryConstraint((LHS0[i], (LHS0[i], LHS1[i], "CARRY" + str(i), RHS[i])), lambda a, b: a == b[0]))
+                problem.constraints.append(BinaryConstraint((LHS1[i], (LHS0[i], LHS1[i], "CARRY" + str(i), RHS[i])), lambda a, b: a == b[1]))
+                problem.constraints.append(BinaryConstraint(("CARRY" + str(i), (LHS0[i], LHS1[i], "CARRY" + str(i), RHS[i])), lambda a, b: a == b[2]))
+                problem.constraints.append(BinaryConstraint((RHS[i], (LHS0[i], LHS1[i], "CARRY" + str(i), RHS[i])), lambda a, b: a == b[3]))
+                # now let's add the constraint for the carry
+                # (LHS0[i] + LHS1[i] + CARRYi) // 10 = CARRY(i+1)
+                problem.variables.append((LHS0[i], LHS1[i], "CARRY" + str(i), "CARRY" + str(i+1)))
+                # the domain of this tuple will be all combinations of 0-9 and 0-9 and 0-1 and 0-1
+                problem.domains[(LHS0[i], LHS1[i], "CARRY" + str(i), "CARRY" + str(i+1))] = dom2
+                problem.constraints.append(UnaryConstraint((LHS0[i], LHS1[i], "CARRY" + str(i), "CARRY" + str(i+1)), lambda a: (a[0] + a[1] + a[2]) // 10 == a[3]))
+                # now link the mega variabels with each single variable
+                problem.constraints.append(BinaryConstraint((LHS0[i], (LHS0[i], LHS1[i], "CARRY" + str(i), "CARRY" + str(i+1))), lambda a, b: a == b[0]))
+                problem.constraints.append(BinaryConstraint((LHS1[i], (LHS0[i], LHS1[i], "CARRY" + str(i), "CARRY" + str(i+1))), lambda a, b: a == b[1]))
+                problem.constraints.append(BinaryConstraint(("CARRY" + str(i), (LHS0[i], LHS1[i], "CARRY" + str(i), "CARRY" + str(i+1))), lambda a, b: a == b[2]))
+                problem.constraints.append(BinaryConstraint(("CARRY" + str(i+1), (LHS0[i], LHS1[i], "CARRY" + str(i), "CARRY" + str(i+1))), lambda a, b: a == b[3]))
+
+        # # now let's add the constraint of the last char in the result if exist
+        if len(RHS) > max(len(LHS0), len(LHS1)):
+            problem.constraints.append(BinaryConstraint((RHS[-1], "CARRY" + str(len(RHS) - 1)), lambda a, b: a == b))
         
+
         return problem
 
     # Read a cryptarithmetic puzzle from a file
