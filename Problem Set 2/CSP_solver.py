@@ -104,58 +104,47 @@ def forward_checking(problem: Problem, assigned_variable: str, assigned_value: A
 # IMPORTANT: Don't use the domains inside the problem, use and modify the ones given by the "domains" argument 
 #            since they contain the current domains of unassigned variables only.
 def least_restraining_values(problem: Problem, variable_to_assign: str, domains: Dict[str, set]) -> List[Any]:
-    #TODO: Write this function
-
-    # IMPORTANT: This function should not modify any of the given arguments.
-    # We only READ from `problem` and `domains`, and never change them.
-
-    # we don't need to create a copy of the domains 
-    # as we are not modifying them, only reading from them.
     x = variable_to_assign
-    x_domain = domains[x]
+    x_domain = list(domains[x])  # convert domain of x to a list for deterministic ordering
 
-    # We extract only BinaryConstraints involving x.
-    # This dictionary only stores references, we do not modify anything.
-    x_constraints = {
-        constraint.get_other(x): constraint
-        for constraint in problem.constraints
-        if isinstance(constraint, BinaryConstraint) and x in constraint.variables
-    }
+    # Step 1: Collect binary constraints involving x, grouped by neighbor variable
+    constraints_by_neighbor: Dict[str, List[BinaryConstraint]] = {}
+    for c in problem.constraints:
+        if not isinstance(c, BinaryConstraint) or x not in c.variables:
+            continue  # skip non-binary constraints or those not involving x
+        y = c.get_other(x)  # get the other variable in this binary constraint
+        constraints_by_neighbor.setdefault(y, []).append(c)  # group constraints by neighbor
 
-    # create the results list
-    results = []
+    results = []  # will store tuples of (value, number_of_pruned_values)
 
-    # check each value of x
-    # for each value, count how many values would be pruned from neighbors' domains
-    # without actually pruning them and then store the count
-    for value in x_domain:
-        pruned_values_count = 0
-
-        for y, constraint in x_constraints.items():
-
-            # Because assigned vars don't appear in domains → skip.
+    # Step 2: For each value in x's domain, count how many values it would prune in neighbors
+    for val in x_domain:
+        pruned_count = 0  # count of values pruned in neighbors if x is assigned 'val'
+        for y, constraints in constraints_by_neighbor.items():
+            # skip neighbors that are already assigned (not in domains)
             if y not in domains:
                 continue
-            
-            # get the domain of neighbor y
             y_domain = domains[y]
+            for yv in y_domain:
+                # check if the current neighbor value yv would be removed
+                rejected = False
+                for c in constraints:
+                    # test if the binary constraint is satisfied with x=val, y=yv
+                    if not c.is_satisfied({x: val, y: yv}):
+                        rejected = True
+                        break  # no need to check other constraints for this neighbor value
+                if rejected:
+                    pruned_count += 1  # increment count of pruned neighbor values
 
-            # check each value of the neighbor y
-            for y_value in y_domain:
-                # constraint check — if it fails, it would be pruned
-                if not constraint.condition(value, y_value):
-                    pruned_values_count += 1
-                    # we do NOT prune or change anything — only count
+        # record how "restrictive" this value is
+        results.append((val, pruned_count))
 
-        # store the value and its pruned count
-        results.append((value, pruned_values_count))
+    # Step 3: Sort by least-restraining (smallest pruned_count first), tie-break by value
+    results.sort(key=lambda p: (p[1], p[0]))
 
-    # sort the result based on the pruned values count first, then by the value itself
-    # (to break ties in ascending order)
-    results.sort(key=lambda pair: (pair[1], pair[0]))
+    # Step 4: Return just the values in the sorted order
+    return [v for v, _ in results]
 
-    # return the sorted list of x values only
-    return [val for val, _ in results]
 # This function should solve CSP problems using backtracking search with forward checking.
 # The variable ordering should be decided by the MRV heuristic.
 # The value ordering should be decided by the "least restraining value" heurisitc.
