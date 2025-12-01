@@ -56,8 +56,6 @@ def forward_checking(problem: Problem, assigned_variable: str, assigned_value: A
 #            order them in ascending order (from the lowest to the highest value).
 # IMPORTANT: Don't use the domains inside the problem, use and modify the ones given by the "domains" argument 
 #            since they contain the current domains of unassigned variables only.
-    variables_to_check=[]
-    checking_constrains=[]
     # print("inside forward checking  function")
     for constraint in problem.constraints:
         #skip all unary constraints
@@ -70,17 +68,23 @@ def forward_checking(problem: Problem, assigned_variable: str, assigned_value: A
 
         #get the other variable involved in the constraint
         other_variable=constraint.get_other(assigned_variable)  
-        if other_variable not in domains.keys():
+        if other_variable not in domains:
             continue
         
-        #deep copy the domain of the other variable to avoid modifying the original domains while iterating
-        tmp_domains=deepcopy(domains[other_variable])
-        for value in tmp_domains:
-            if not constraint.condition(assigned_value,value):
-                #remove values that violates the constrain from the other variable's domain
-                domains[other_variable].discard(value)
-
-        #check if the domain of the other variable is empty
+        # Create a new set for the filtered domain
+        new_other_domain = set()
+        
+        # Iterate over the current domain of the other variable
+        for other_value in domains[other_variable]:
+            # Create a temporary assignment to check if the constraint is satisfied
+            temp_assignment = {assigned_variable: assigned_value, other_variable: other_value}
+            if constraint.is_satisfied(temp_assignment):
+                new_other_domain.add(other_value)
+        
+        # Update the domain of the other variable
+        domains[other_variable] = new_other_domain
+        
+        # Check if the domain of the other variable became empty
         if not domains[other_variable]:
             return False
 
