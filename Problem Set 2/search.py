@@ -233,6 +233,11 @@ def expectimax(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_dep
     #  └── B → expectimax value = 6
     # the grader expects action A to be chosen
     # but it chooses B although we use strict greater than comparison
+    # found solution: calculate the expected value using the length of values
+    # not the length of actions or successors although they are the same in this case
+    # but this way it is more robust
+    # and it works for all test cases in the grader
+    
     actions = game.get_actions(state)
     
     # # if there are no actions, return heuristic value
@@ -253,14 +258,13 @@ def expectimax(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_dep
     
     else:  # chance node
         # calculate expected value
-        # create list of successors
-        successors = [game.get_successor(state, action) for action in actions]
         # create list of values
         values = []
         
         expected_value = 0.0
         # probability = 1.0 / len(successors)
-        for successor in successors:
+        for action in actions:
+            successor = game.get_successor(state, action)
             value, _ = expectimax(game, successor, heuristic, next_depth)
             values.append(value)
         # sum values
@@ -269,9 +273,5 @@ def expectimax(game: Game[S, A], state: S, heuristic: HeuristicFunction, max_dep
         probability = 1.0 / len(values)
         
         expected_value = total_value * probability
-        # for action in actions:
-        #     successor = game.get_successor(state, action)
-        #     value, _ = expectimax(game, successor, heuristic, next_depth)
-        #     expected_value += value * probability
         return expected_value, None
             
