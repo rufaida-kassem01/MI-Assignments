@@ -79,8 +79,12 @@ class SnakeEnv(Environment[SnakeObservation, Direction]):
         # TODO add your code here
         # IMPORTANT NOTE: Define the snake before calling generate_random_apple
         # NotImplemented()
+        # Initialize the snake at the center of the grid
+        # with length 1 and moving LEFT
         self.snake = [Point(self.width // 2, self.height // 2)]
         self.direction = Direction.LEFT
+        
+        # Generate the first apple
         self.apple = self.generate_random_apple()
 
         return SnakeObservation(tuple(self.snake), self.direction, self.apple)
@@ -97,9 +101,14 @@ class SnakeEnv(Environment[SnakeObservation, Direction]):
         # NOTE: The action order does not matter
         # NotImplemented()
         possible_actions = []
-        for action in [Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]:
-            if action != Direction.NONE and action != (self.direction + 2) % 4:
-                possible_actions.append(action)
+        
+        # cannot move in the opposite direction
+        opposite_direction = self.direction.rotate(2)
+        
+        # add all other directions except opposite_direction
+        for direction in Direction:
+            if direction != self.direction and direction != opposite_direction:
+                possible_actions.append(direction)
         return possible_actions
 
     def step(self, action: Direction) -> \
@@ -119,52 +128,44 @@ class SnakeEnv(Environment[SnakeObservation, Direction]):
         """
         # TODO Complete the following function
         # NotImplemented()
-        # Update the direction
-        self.direction = action
+
+        done = False
+        reward = 0
+        # Update the direction if action is not NONE
+        if action != Direction.NONE:
+            self.direction = action
+            
         # Compute the new head position
-        head = self.snake[0]
-        if self.direction == Direction.UP:
-            new_head = Point(head.x, (head.y - 1) % self.height)
-        elif self.direction == Direction.DOWN:
-            new_head = Point(head.x, (head.y + 1) % self.height)
-        elif self.direction == Direction.LEFT:
-            new_head = Point((head.x - 1) % self.width, head.y)
-        elif self.direction == Direction.RIGHT:
-            new_head = Point((head.x + 1) % self.width, head.y)
+        new_head = self.snake[0] + self.direction.to_vector()
+        # Wrap around the grid
+        new_head = Point(new_head.x % self.width, new_head.y % self.height)
         # Check if the snake bites itself
-        if new_head in self.snake:
+        # check all body except the tail (last element)
+        if new_head in self.snake[:-1]:
             reward = -100
             done = True
             observation = SnakeObservation(tuple(self.snake), self.direction, self.apple)
             return observation, reward, done, {}
         # Move the snake
-        self.snake.insert(0, new_head)
+        self.snake.insert(0, new_head)  # Add new head
         # Check if the snake eats the apple
         if self.apple is not None and new_head == self.apple:
             reward = 1
-            # Generate a new apple
+            # # check if the snake has won the game
             if len(self.snake) == self.width * self.height:
                 # The snake has won the game
-                self.apple = None
                 reward += 100
                 done = True
+                self.apple = None
             else:
+                # Generate a new apple
                 self.apple = self.generate_random_apple()
         else:
             # Remove the tail
             self.snake.pop()
-            reward = 0
-            done = False
-        # Return the new observation
         observation = SnakeObservation(tuple(self.snake), self.direction, self.apple)
+        
         return observation, reward, done, {}
-        
-
-        # done = False
-        # reward = 0
-        # observation = SnakeObservation(tuple(self.snake), self.direction, self.apple)
-        
-        # return observation, reward, done, {}
 
     ###########################
     #### Utility Functions ####
