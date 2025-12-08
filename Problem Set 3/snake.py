@@ -78,7 +78,10 @@ class SnakeEnv(Environment[SnakeObservation, Direction]):
             self.rng.seed(seed) # Initialize the random generator using the seed
         # TODO add your code here
         # IMPORTANT NOTE: Define the snake before calling generate_random_apple
-        NotImplemented()
+        # NotImplemented()
+        self.snake = [Point(self.width // 2, self.height // 2)]
+        self.direction = Direction.LEFT
+        self.apple = self.generate_random_apple()
 
         return SnakeObservation(tuple(self.snake), self.direction, self.apple)
 
@@ -92,7 +95,12 @@ class SnakeEnv(Environment[SnakeObservation, Direction]):
         # TODO add your code here
         # a snake can wrap around the grid
         # NOTE: The action order does not matter
-        NotImplemented()
+        # NotImplemented()
+        possible_actions = []
+        for action in [Direction.UP, Direction.DOWN, Direction.LEFT, Direction.RIGHT]:
+            if action != Direction.NONE and action != (self.direction + 2) % 4:
+                possible_actions.append(action)
+        return possible_actions
 
     def step(self, action: Direction) -> \
             Tuple[SnakeObservation, float, bool, Dict]:
@@ -110,13 +118,53 @@ class SnakeEnv(Environment[SnakeObservation, Direction]):
             - info (Dict): A dictionary containing any extra information. You can keep it empty.
         """
         # TODO Complete the following function
-        NotImplemented()
-
-        done = False
-        reward = 0
+        # NotImplemented()
+        # Update the direction
+        self.direction = action
+        # Compute the new head position
+        head = self.snake[0]
+        if self.direction == Direction.UP:
+            new_head = Point(head.x, (head.y - 1) % self.height)
+        elif self.direction == Direction.DOWN:
+            new_head = Point(head.x, (head.y + 1) % self.height)
+        elif self.direction == Direction.LEFT:
+            new_head = Point((head.x - 1) % self.width, head.y)
+        elif self.direction == Direction.RIGHT:
+            new_head = Point((head.x + 1) % self.width, head.y)
+        # Check if the snake bites itself
+        if new_head in self.snake:
+            reward = -100
+            done = True
+            observation = SnakeObservation(tuple(self.snake), self.direction, self.apple)
+            return observation, reward, done, {}
+        # Move the snake
+        self.snake.insert(0, new_head)
+        # Check if the snake eats the apple
+        if self.apple is not None and new_head == self.apple:
+            reward = 1
+            # Generate a new apple
+            if len(self.snake) == self.width * self.height:
+                # The snake has won the game
+                self.apple = None
+                reward += 100
+                done = True
+            else:
+                self.apple = self.generate_random_apple()
+        else:
+            # Remove the tail
+            self.snake.pop()
+            reward = 0
+            done = False
+        # Return the new observation
         observation = SnakeObservation(tuple(self.snake), self.direction, self.apple)
-        
         return observation, reward, done, {}
+        
+
+        # done = False
+        # reward = 0
+        # observation = SnakeObservation(tuple(self.snake), self.direction, self.apple)
+        
+        # return observation, reward, done, {}
 
     ###########################
     #### Utility Functions ####
